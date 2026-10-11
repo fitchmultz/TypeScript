@@ -19962,11 +19962,13 @@ func (c *Checker) isValidBaseType(t *Type) bool {
 
 // TODO: GH#18217 If `checkBase` is undefined, we should not call this because this will always return false.
 func (c *Checker) hasBaseType(t *Type, checkBase *Type) bool {
+	// Base types can be reached through many paths, so search each one only once.
+	var visited collections.Set[*Type]
 	var check func(*Type) bool
 	check = func(t *Type) bool {
 		if t.objectFlags&(ObjectFlagsClassOrInterface|ObjectFlagsReference) != 0 {
 			target := getTargetType(t)
-			return target == checkBase || core.Some(c.getBaseTypes(target), check)
+			return target == checkBase || visited.AddIfAbsent(target) && core.Some(c.getBaseTypes(target), check)
 		}
 		if t.flags&TypeFlagsIntersection != 0 {
 			return core.Some(t.Types(), check)
